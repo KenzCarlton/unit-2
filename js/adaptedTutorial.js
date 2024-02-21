@@ -1,4 +1,3 @@
-// Add all scripts to the JS folder
 /* Map of GeoJSON data from MegaCities.geojson */
 //declare map var in global scope
 var map;
@@ -36,7 +35,7 @@ function onEachFeature(feature, layer) {
 //function to retrieve the data and place it on the map
 function getData(){
     //load the data
-    fetch("data/EQdata.geojson")
+    fetch("data/MegaCities.geojson")
         .then(function(response){
             return response.json();
         })

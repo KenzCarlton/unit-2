@@ -1,8 +1,11 @@
+//L.map creates a map object; setView assigns opening location and zoom to map
 var map = L.map('map').setView([-104.99404, 39.75621], 13);
 
+//L.tilelayer adds a tile layer; .addTo actually adds the object to the map
 L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
 }).addTo(map);
+
 
 var geojsonFeature = {
     "type": "Feature",
@@ -33,6 +36,7 @@ var myStyle = {
     "opacity": 0.65
 };
 
+//L.geoJSON creates a new geoJSON layer
 L.geoJSON(myLines, {
     style: myStyle
 }).addTo(map);
@@ -76,7 +80,8 @@ L.geoJSON(states, {
 }).addTo(map);
 
 
-
+//onEachFeature will apply the following code once for each feature
+//.bindPopup assigns a popup to a given layer
 function onEachFeature(feature, layer) {
     // does this feature have a property named popupContent?
     if (feature.properties && feature.properties.popupContent) {
@@ -125,6 +130,7 @@ var someFeatures = [{
     }
 }];
 
+//filter determines whether to apply code to a given feature
 L.geoJSON(someFeatures, {
     filter: function(feature, layer) {
         return feature.properties.show_on_map;
