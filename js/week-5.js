@@ -1,13 +1,14 @@
-// Add all scripts to the JS folder
 /* Map of GeoJSON data from MegaCities.geojson */
-//declare vars in global scope
+//declare map variable globally so all functions have access
 var map;
+var minValue;
 
-//function to instantiate the Leaflet map
+//step 1 create map
 function createMap(){
+
     //create the map
     map = L.map('map', {
-        center: [20, 0],
+        center: [0, 0],
         zoom: 2
     });
 
@@ -17,32 +18,51 @@ function createMap(){
     }).addTo(map);
 
     //call getData function
-    getData();
+    getData(map);
 };
+
+function calcMinValue(data){
+    //create empty array to store all data values
+    var allValues = [];
+    //loop through each city
+    for(var city of data.features){
+        //loop through each year
+        for(var year = 1985; year <= 2015; year+=5){
+              //get population for current year
+              var value = city.properties["Pop_"+ String(year)];
+              //add value to array
+              allValues.push(value);
+        }
+    }
+    //get minimum value of our array
+    var minValue = Math.min(...allValues)
+
+    return minValue;
+}
 
 //calculate the radius of each proportional symbol
 function calcPropRadius(attValue) {
     //constant factor adjusts symbol sizes evenly
-    var minRadius = 2.5;
+    var minRadius = 5;
     //Flannery Appearance Compensation formula
-    var radius = 1.0083 * Math.pow(attValue,0.5715) * minRadius
-    
+    var radius = 1.0083 * Math.pow(attValue/minValue,0.5715) * minRadius
     return radius;
-    };
-
+};
 
 //function to convert markers to circle markers
 function pointToLayer(feature, latlng, attributes){
     //Step 4: Assign the current attribute based on the first index of the attributes array
     var attribute = attributes[0];
+    //check
+    console.log(attribute);
 
     //create marker options
     var options = {
-        fillColor: "#4b970f",
-        color: "#86592d",
+        fillColor: "#ff7800",
+        color: "#000",
         weight: 1,
         opacity: 1,
-        fillOpacity: 0.75
+        fillOpacity: 0.8
     };
 
     //For each feature, determine its value for the selected attribute
@@ -55,17 +75,17 @@ function pointToLayer(feature, latlng, attributes){
     var layer = L.circleMarker(latlng, options);
 
     //build popup content string starting with city...Example 2.1 line 24
-    var popupContent = "<p><b>State:</b> " + feature.properties.name + "</p>";
+    var popupContent = "<p><b>City:</b> " + feature.properties.City + "</p>";
 
     //add formatted attribute to popup content string
-    var month = attribute.split("_")[1];
-    popupContent += "<p><b>Earthquakes during  " + month + " 2023:</b> " + feature.properties[attribute] + " </p>";
+    var year = attribute.split("_")[1];
+    popupContent += "<p><b>Population in " + year + ":</b> " + feature.properties[attribute] + " million</p>";
     
     //bind the popup to the circle marker
     layer.bindPopup(popupContent, {
         offset: new L.Point(0,-options.radius) 
     });
-    
+
     //return the circle marker to the L.geoJson pointToLayer option
     return layer;
 };
@@ -80,14 +100,14 @@ function createPropSymbols(data, attributes){
     }).addTo(map);
 };
 
-//Create  sequence controls
+//Step 1: Create new sequence controls
 function createSequenceControls(attributes){
     //create range input element (slider)
     var slider = "<input class='range-slider' type='range'></input>";
     document.querySelector("#panel").insertAdjacentHTML('beforeend',slider);
 
     //set slider attributes
-    document.querySelector(".range-slider").max = 11;
+    document.querySelector(".range-slider").max = 6;
     document.querySelector(".range-slider").min = 0;
     document.querySelector(".range-slider").value = 0;
     document.querySelector(".range-slider").step = 1;
@@ -95,7 +115,7 @@ function createSequenceControls(attributes){
     //add step buttons
     document.querySelector('#panel').insertAdjacentHTML('beforeend','<button class="step" id="reverse">Reverse</button>');
     document.querySelector('#panel').insertAdjacentHTML('beforeend','<button class="step" id="forward">Forward</button>');
-
+    
     //click listener for buttons
     document.querySelectorAll('.step').forEach(function(step){
         step.addEventListener("click", function(){
@@ -105,29 +125,31 @@ function createSequenceControls(attributes){
             if (step.id == 'forward'){
                 index++;
                 //Step 7: if past the last attribute, wrap around to first attribute
-                index = index > 11 ? 0 : index;
+                index = index > 6 ? 0 : index;
             } else if (step.id == 'reverse'){
                 index--;
                 //Step 7: if past the first attribute, wrap around to last attribute
-                index = index < 0 ? 11 : index;
+                index = index < 0 ? 6 : index;
             };
 
             //Step 8: update slider
             document.querySelector('.range-slider').value = index;
-            updatePropSymbols(attributes[index]);        })
+            console.log(index);
+        
+            updatePropSymbols(attributes[index]);})
     })
 
     //input listener for slider
     document.querySelector('.range-slider').addEventListener('input', function(){            
         var index = this.value;
+        console.log(index);
         updatePropSymbols(attributes[index]);    });
 
 };
 
 function updatePropSymbols(attribute){
     map.eachLayer(function(layer){
-        //had to emit "&& layer.feature.properties[attribute]" because several of my values were needed to be zero
-        if (layer.feature){
+        if (layer.feature && layer.feature.properties[attribute]){
             //access feature properties
             var props = layer.feature.properties;
 
@@ -136,11 +158,11 @@ function updatePropSymbols(attribute){
             layer.setRadius(radius);
 
             //add city to popup content string
-            var popupContent = "<p><b>State:</b> " + props.name + "</p>";
+            var popupContent = "<p><b>City:</b> " + props.City + "</p>";
 
             //add formatted attribute to panel content string
-            var month = attribute.split("_")[1];
-            popupContent += "<p><b>Earthquakes during  " + month + " 2023:</b> " + props[attribute] + " </p>";
+            var year = attribute.split("_")[1];
+            popupContent += "<p><b>Population in " + year + ":</b> " + props[attribute] + " million</p>";
 
             //update popup content            
             popup = layer.getPopup();            
@@ -159,27 +181,31 @@ function processData(data){
     //push each attribute name into attributes array
     for (var attribute in properties){
         //only take attributes with population values
-        if (attribute.indexOf("mon_") > -1){
+        if (attribute.indexOf("Pop") > -1){
             attributes.push(attribute);
         };
     };
 
+    //check result
+    console.log(attributes);
+
     return attributes;
 };
 
-//function to retrieve the data and place it on the map
+//Step 2: Import GeoJSON data
 function getData(){
     //load the data
-    fetch("data/EQdata.geojson")
+    fetch("data/MegaCities.geojson")
         .then(function(response){
             return response.json();
         })
         .then(function(json){
             //create an attributes array
            var attributes = processData(json);
+           minValue = calcMinValue(json);
            createPropSymbols(json, attributes);
            createSequenceControls(attributes);
         })
 };
 
-document.addEventListener('DOMContentLoaded',createMap);
+document.addEventListener('DOMContentLoaded',createMap)

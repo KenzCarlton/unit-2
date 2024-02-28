@@ -53,14 +53,12 @@ function getData(){
             L.geoJson(json, {
                 pointToLayer: function (feature, latlng){
                     return L.circleMarker(latlng, geojsonMarkerOptions);
-                }
-            }).addTo(map);
-            L.geoJson(json, {
-                onEachFeature: onEachFeature
+                },
+                
+                onEachFeature
             }).addTo(map);
         });
         
 };
 
 document.addEventListener('DOMContentLoaded',createMap);
-L.geoJSON(geojsonFeature).addTo(map);
