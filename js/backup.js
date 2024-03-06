@@ -3,6 +3,10 @@
 //declare vars in global scope
 var map;
 var dataStats = {};  
+var all = true
+var five = false
+var ten = false
+var forty = false
 
 
 //function to instantiate the Leaflet map
@@ -32,7 +36,7 @@ function createMap(){
 //calculate the radius of each proportional symbol
 function calcPropRadius(attValue) {
     //constant factor adjusts symbol sizes evenly
-    var minRadius = 2.5;
+    var minRadius = 4;
     //Flannery Appearance Compensation formula (my minimum value = 1)
     var radius = 1.0083 * Math.pow(attValue,0.5715) * minRadius
     
@@ -55,7 +59,7 @@ function pointToLayer(feature, latlng, attributes){
     var attValue = Number(feature.properties[attribute]);
 
     //Give each feature's circle marker a radius based on its attribute value
-    if (attValue > 1) {
+    if (attValue >= 1) {
         options.radius = calcPropRadius(attValue);
         options.fillColor = "#009900";
         options.color = "#000"
@@ -80,6 +84,7 @@ function pointToLayer(feature, latlng, attributes){
     
     //return the circle marker to the L.geoJson pointToLayer option
     return layer;
+    
 };
 
 //Add circle markers for point features to the map
@@ -102,6 +107,10 @@ function createSequenceControls(attributes){
         onAdd: function () {
             // create the control container div with a particular class name
             var container = L.DomUtil.create('div', 'sequence-control-container');
+            
+            //add label
+            container.insertAdjacentHTML('beforeend', '<h3>Sequence by month</h3> </button>'); 
+            
             //create range input element (slider)
             container.insertAdjacentHTML('beforeend', '<input class="range-slider" type="range">');
             container.querySelector(".range-slider").max = 11;
@@ -143,6 +152,7 @@ function createSequenceControls(attributes){
         document.querySelector('.range-slider').value = index;
         updatePropSymbols(attributes[index]);        
         })
+        
     
     })
             
@@ -154,6 +164,68 @@ function createSequenceControls(attributes){
 
 }                        
 
+function filterControls(attributes){
+    var FiltControl = L.Control.extend({
+        options: {
+            position: 'bottomleft'
+        },
+
+        onAdd: function () {
+            // create the control container div with a particular class name
+            var container = L.DomUtil.create('div', 'filter-container');
+
+            //add label
+            container.insertAdjacentHTML('beforeend', '<h3>Filter by number of Earthquakes</h3> </button>'); 
+
+            //add filter buttons
+            container.insertAdjacentHTML('beforeend', '<button class="freq" id="all"> <h4> <span class="filt1"><img src="img/unclick_.png"></span> all counts </h4> </button>'); 
+            container.insertAdjacentHTML('beforeend', '<button class="freq" id="5"> <h4> <span class="filt2"><img src="img/unclick_.png"></span> 5 or more  </h4> </button>'); 
+            container.insertAdjacentHTML('beforeend', '<button class="freq" id="10"> <h4> <span class="filt3"><img src="img/unclick_.png"></span> 10 or more </h4> </button>'); 
+            container.insertAdjacentHTML('beforeend', '<button class="freq" id="40"> <h4> <span class="filt1"><img src="img/unclick_.png"></span> 40 or more </h4> </button>'); 
+
+
+            //disable any mouse event listeners for the container
+            L.DomEvent.disableClickPropagation(container);
+
+            return container;
+        }
+    });
+
+    map.addControl(new FiltControl());
+
+    //click listener for buttons
+    document.querySelectorAll('.freq').forEach(function(step){
+    
+        step.addEventListener("click", function(){
+            
+        //adjust filtering/resymbolization
+        if (step.id == 'all'){
+            all = true,
+            five = false,
+            ten = false,
+            forty = false
+        } else if (step.id == '5'){
+            all = false,
+            five = true,
+            ten = false,
+            forty = false
+        } else if (step.id == '10'){
+            all = false,
+            five = false,
+            ten = true,
+            forty = false
+        } else if (step.id == '40'){
+            all = false,
+            five = false,
+            ten = false,
+            forty = true
+        };
+        console.log(all, five, ten, forty);
+        updatePropSymbols(attributes[document.querySelector('.range-slider').value])
+        });
+
+    })
+}
 
 function updatePropSymbols(attribute){
     map.eachLayer(function(layer){
@@ -162,17 +234,34 @@ function updatePropSymbols(attribute){
             //access feature properties
             var props = layer.feature.properties;
 
-            //update each feature's symbol based on new attribute values
-            if (props[attribute] >= 1) {
-                layer.setRadius(calcPropRadius(props[attribute]));
-                layer.setStyle({fillColor: "#009900"});
-                layer.setStyle({color: "#000"});
 
-            } else {
-                layer.setRadius(calcPropRadius(1));
-                layer.setStyle({fillColor: "#333333"});
-                layer.setStyle({color: "#333333"});
+            //update each feature's symbol based on new attribute values
+            if (all == true){
+                if (props[attribute] >= 1) {
+                    layer.setRadius(calcPropRadius(props[attribute])).setStyle({fillColor: "#009900"}).setStyle({color: "#000"}).setStyle({opacity: 1}).setStyle({fillOpacity: .75});
+                } else {
+                    layer.setRadius(calcPropRadius(1)).setStyle({fillColor: "#333333"}).setStyle({color: "#333333"}).setStyle({opacity: 1}).setStyle({fillOpacity: .75});            };
+    
+            } else if (five == true) {
+                if (props[attribute] >= 5) {
+                    layer.setRadius(calcPropRadius(props[attribute])).setStyle({fillColor: "#009900"}).setStyle({color: "#000"}).setStyle({opacity: 1}).setStyle({fillOpacity: .75});
+                } else {
+                    layer.setRadius(calcPropRadius(1)).setStyle({opacity: 0}).setStyle({fillOpacity: 0});            };
+                
+            } else if (ten == true){
+                if (props[attribute] >= 10) {
+                    layer.setRadius(calcPropRadius(props[attribute])).setStyle({fillColor: "#009900"}).setStyle({color: "#000"}).setStyle({opacity: 1}).setStyle({fillOpacity: .75});
+                } else {
+                    layer.setRadius(calcPropRadius(1)).setStyle({opacity: 0}).setStyle({fillOpacity: 0});            };
+                
+            } else if (forty == true){
+                if (props[attribute] >= 40) {
+                    layer.setRadius(calcPropRadius(props[attribute])).setStyle({fillColor: "#009900"}).setStyle({color: "#000"}).setStyle({opacity: 1}).setStyle({fillOpacity: .75});
+                } else {
+                    layer.setRadius(calcPropRadius(1)).setStyle({opacity: 0}).setStyle({fillOpacity: 0});            };
+                
             };
+
 
             //update popup content     
             var popupContent = createPopupContent(props, attribute);        
@@ -222,7 +311,7 @@ function createLegend(){
         onAdd: function () {
             // create the control container with a particSular class name
             var container = L.DomUtil.create('div', 'legend-control-container');
-            container.innerHTML = '<h3 class="temporalLegend">2.5+ magnitude earthquakes in <span class="month">January</span> 2023</h3>';
+            container.innerHTML = '<h2 class="temporalLegend">2.5+ magnitude earthquakes in <span class="month">January</span> 2023</h2>';
 
             return container;
         }
@@ -266,7 +355,8 @@ function getData(){
            createPropSymbols(json, attributes);
            createSequenceControls(attributes);
            createLegend();
-           calcStats(json)
+           calcStats(json);
+           filterControls(attributes)
         })
 };
 

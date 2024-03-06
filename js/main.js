@@ -66,8 +66,8 @@ function pointToLayer(feature, latlng, attributes){
 
     } else {
         options.radius = calcPropRadius(1);
-        options.fillColor = "#333333";
-        options.color = "#333333"
+        options.fillColor = "#fff";
+        options.color = "#000"
 
     };
 
@@ -162,8 +162,9 @@ function createSequenceControls(attributes){
         updatePropSymbols(attributes[index]);    
     });
 
-}                        
+};                        
 
+//create filter controls
 function filterControls(attributes){
     var FiltControl = L.Control.extend({
         options: {
@@ -178,10 +179,10 @@ function filterControls(attributes){
             container.insertAdjacentHTML('beforeend', '<h3>Filter by number of Earthquakes</h3> </button>'); 
 
             //add filter buttons
-            container.insertAdjacentHTML('beforeend', '<button class="freq" id="all"> <h4> <span class="filt1"><img src="img/unclick_.png"></span> all counts </h4> </button>'); 
+            container.insertAdjacentHTML('beforeend', '<button class="freq" id="all"> <h4> <span class="filt1"><img src="img/click_.png"></span> all counts </h4> </button>'); 
             container.insertAdjacentHTML('beforeend', '<button class="freq" id="5"> <h4> <span class="filt2"><img src="img/unclick_.png"></span> 5 or more  </h4> </button>'); 
             container.insertAdjacentHTML('beforeend', '<button class="freq" id="10"> <h4> <span class="filt3"><img src="img/unclick_.png"></span> 10 or more </h4> </button>'); 
-            container.insertAdjacentHTML('beforeend', '<button class="freq" id="40"> <h4> <span class="filt1"><img src="img/unclick_.png"></span> 40 or more </h4> </button>'); 
+            container.insertAdjacentHTML('beforeend', '<button class="freq" id="40"> <h4> <span class="filt4"><img src="img/unclick_.png"></span> 40 or more </h4> </button>'); 
 
 
             //disable any mouse event listeners for the container
@@ -203,30 +204,50 @@ function filterControls(attributes){
             all = true,
             five = false,
             ten = false,
-            forty = false
+            forty = false,
+            document.querySelector("span.filt1").innerHTML =  '<img src="img/click_.png">',
+            document.querySelector("span.filt2").innerHTML =  '<img src="img/unclick_.png">',
+            document.querySelector("span.filt3").innerHTML =  '<img src="img/unclick_.png">',
+            document.querySelector("span.filt4").innerHTML =  '<img src="img/unclick_.png">'
+
         } else if (step.id == '5'){
             all = false,
             five = true,
             ten = false,
-            forty = false
+            forty = false,
+            document.querySelector("span.filt1").innerHTML =  '<img src="img/unclick_.png">',
+            document.querySelector("span.filt2").innerHTML =  '<img src="img/click_.png">',
+            document.querySelector("span.filt3").innerHTML =  '<img src="img/unclick_.png">',
+            document.querySelector("span.filt4").innerHTML =  '<img src="img/unclick_.png">'
+
         } else if (step.id == '10'){
             all = false,
             five = false,
             ten = true,
-            forty = false
+            forty = false,
+            document.querySelector("span.filt1").innerHTML =  '<img src="img/unclick_.png">',
+            document.querySelector("span.filt2").innerHTML =  '<img src="img/unclick_.png">',
+            document.querySelector("span.filt3").innerHTML =  '<img src="img/click_.png">',
+            document.querySelector("span.filt4").innerHTML =  '<img src="img/unclick_.png">'
+
         } else if (step.id == '40'){
             all = false,
             five = false,
             ten = false,
-            forty = true
+            forty = true,
+            document.querySelector("span.filt1").innerHTML =  '<img src="img/unclick_.png">',
+            document.querySelector("span.filt2").innerHTML =  '<img src="img/unclick_.png">',
+            document.querySelector("span.filt3").innerHTML =  '<img src="img/unclick_.png">',
+            document.querySelector("span.filt4").innerHTML =  '<img src="img/click_.png">'
         };
         console.log(all, five, ten, forty);
         updatePropSymbols(attributes[document.querySelector('.range-slider').value])
         });
 
     })
-}
+};
 
+//update the proportional symbols
 function updatePropSymbols(attribute){
     map.eachLayer(function(layer){
         //had to emit "&& layer.feature.properties[attribute]" because several of my values were needed to be zero
@@ -240,7 +261,7 @@ function updatePropSymbols(attribute){
                 if (props[attribute] >= 1) {
                     layer.setRadius(calcPropRadius(props[attribute])).setStyle({fillColor: "#009900"}).setStyle({color: "#000"}).setStyle({opacity: 1}).setStyle({fillOpacity: .75});
                 } else {
-                    layer.setRadius(calcPropRadius(1)).setStyle({fillColor: "#333333"}).setStyle({color: "#333333"}).setStyle({opacity: 1}).setStyle({fillOpacity: .75});            };
+                    layer.setRadius(calcPropRadius(1)).setStyle({fillColor: "#fff"}).setStyle({color: "#000"}).setStyle({opacity: 1}).setStyle({fillOpacity: .75});            };
     
             } else if (five == true) {
                 if (props[attribute] >= 5) {
@@ -291,6 +312,7 @@ function processData(data){
     return attributes;
 };
 
+//generate popup content
 function createPopupContent(properties, attribute){
     //add city to popup content string
     var popupContent = "<p><b>State:</b> " + properties.name + "</p>";
@@ -302,6 +324,33 @@ function createPopupContent(properties, attribute){
     return popupContent;
 };
 
+//calculate max/mean values
+function calcStats(data){
+    //create empty array to store all data values
+    var allValues = []; 
+    var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+    //loop through each city
+    for(var state of data.features){
+        //loop through each year
+        for(var month = 0; month <= 11; month+=1){
+              //get population for current year
+              var value = state.properties["mon_"+ String(months[month])];
+              //add value to array (ignoring all 0 values)
+              if (value > 0){
+                allValues.push(value);
+              }
+            };
+    }
+    //get max, mean stats for our array (not calculating min, because actual min = 0; but I need min to act as 1 for legend)
+    dataStats.min = 1;
+    
+    dataStats.max = Math.max(...allValues);
+    //calculate meanValue
+    var sum = allValues.reduce(function(a, b){return a+b;});
+    dataStats.mean = sum/allValues.length;
+};
+
+//construct legend
 function createLegend(){
     var LegendControl = L.Control.extend({
         options: {
@@ -313,34 +362,67 @@ function createLegend(){
             var container = L.DomUtil.create('div', 'legend-control-container');
             container.innerHTML = '<h2 class="temporalLegend">2.5+ magnitude earthquakes in <span class="month">January</span> 2023</h2>';
 
+            //Step 1: start attribute legend svg string
+            var svg = '<svg id="attribute-legend" width="160px" height="130px">';
+
+            //array of circle names to base loop on
+            var circles = ["max", "mean", "min"];
+            //Step 2: loop to add each circle and text to svg string
+            for (var i=0; i<circles.length; i++){
+
+                //Step 3: assign the r and cy attributes  
+                var radius = calcPropRadius(dataStats[circles[i]]);
+                //console.log(radius);
+                var cy = 110 - radius;  
+
+                //circle string
+                svg += '<circle class="legend-circle" id="' + circles[i] + '" r="' + radius + '"cy="' + cy + '" fill="#009900" fill-opacity="0.8" stroke="#000000" cx="65"/>';  
+        
+                //evenly space out labels            
+                var textY = i * 40 + 25;         
+
+                //text string            
+                svg += '<text class = "circleText" id="' + circles[i] + '-text" x="125" y="' + textY + '">' + Math.round(dataStats[circles[i]]) + '</text>';
+
+            };  
+            
+            //add zero value to legend
+            var rad = calcPropRadius(1)
+            cy_ = 129 - rad
+            svg += '<circle class="legend-circle" id="zero" r="' + rad + '"cy="' + cy_ + '" fill="#fff" fill-opacity="0.8" stroke="#000000" cx="65"/>';  
+            svg += '<text class = "circleText" id="zero -text" x="125" y="129">Zero</text>';
+
+
+            //close svg string
+            svg += "</svg>";
+
+            //add attribute legend svg to container
+            container.innerHTML += svg;
+
             return container;
+            
         }
     });
 
+    //create title
+    var Title = L.Control.extend({
+        options: {
+            position: 'topright'
+        },
+
+        onAdd: function () {
+            var titleContainer = L.DomUtil.create('div', 'titleBox');
+            titleContainer.innerHTML = '<h1 class="title">2.5+ Magnitude Earthquakes per US Contiguous State by Month in 2023</h1>';
+        
+            return titleContainer;
+
+        }
+
+    });
+
+    map.addControl(new Title());
     map.addControl(new LegendControl());
 };
-
-function calcStats(data){
-    //create empty array to store all data values
-    var allValues = []; 
-    var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-    //loop through each city
-    for(var state of data.features){
-        //loop through each year
-        for(var month = 0; month <= 11; month+=1){
-              //get population for current year
-              var value = state.properties["mon_"+ String(months[month])];
-              //add value to array
-              allValues.push(value);
-        }
-    }
-    //get max, mean stats for our array (not calculating min, because actual min = 0; but I need min to act as 1 for legend)
-    dataStats.max = Math.max(...allValues);
-    //calculate meanValue
-    var sum = allValues.reduce(function(a, b){return a+b;});
-    dataStats.mean = sum/ allValues.length;
-
-}    
 
 //function to retrieve the data and place it on the map
 function getData(){
@@ -354,8 +436,8 @@ function getData(){
            var attributes = processData(json);
            createPropSymbols(json, attributes);
            createSequenceControls(attributes);
-           createLegend();
            calcStats(json);
+           createLegend();
            filterControls(attributes)
         })
 };
